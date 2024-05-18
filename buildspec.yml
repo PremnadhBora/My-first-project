@@ -1,0 +1,43 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8  # Example runtime; adjust as needed
+    commands:
+      # Install dependencies (e.g., unzip, wget)
+      - apt-get update -y
+      - apt-get install -y unzip wget
+
+      # Install Terraform
+      - wget https://releases.hashicorp.com/terraform/1.1.6/terraform_1.1.6_linux_amd64.zip
+      - unzip terraform_1.1.6_linux_amd64.zip
+      - mv terraform /usr/local/bin/
+      - terraform --version
+
+  pre_build:
+    commands:
+      # Navigate to the directory containing Terraform configuration files
+      - cd terraform_directory
+
+      # Set up AWS credentials (if not using IAM role attached to the CodeBuild service)
+      - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+      # Initialize Terraform
+      - terraform init
+
+  build:
+    commands:
+      # Plan Terraform changes
+      - terraform plan -out=tfplan
+
+  post_build:
+    commands:
+      # Apply Terraform changes
+      - terraform apply -auto-approve tfplan
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: yes

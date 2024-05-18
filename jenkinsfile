@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    environment {
+        // Define environment variables if needed
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the source code from your version control system
+                checkout scm
+            }
+        }
+        
+        stage('Install Terraform') {
+            steps {
+                script {
+                    // Install Terraform
+                    sh '''
+                    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+                    sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+                    sudo apt-get update && sudo apt-get install -y terraform
+                    terraform --version
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                script {
+                    // Navigate to the directory containing Terraform configuration files
+                    dir('terraform_directory') {
+                        // Initialize Terraform
+                        sh 'terraform init'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    dir('terraform_directory') {
+                        // Plan Terraform changes
+                        sh 'terraform plan -out=tfplan'
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    dir('terraform_directory') {
+                        // Apply Terraform changes
+                        sh 'terraform apply -auto-approve tfplan'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up workspace
+            cleanWs()
+        }
+    }
+}
